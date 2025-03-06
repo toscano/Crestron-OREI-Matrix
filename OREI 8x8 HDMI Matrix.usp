@@ -1,0 +1,295 @@
+/*******************************************************************************************
+  SIMPL+ Module Information
+  (Fill in comments below)
+*******************************************************************************************/
+/*
+Dealer Name:
+System Name:
+System Number:
+Programmer:
+Comments:
+*/
+
+/*******************************************************************************************
+  Compiler Directives
+  (Uncomment and declare compiler directives as needed)
+*******************************************************************************************/
+#DEFINE_CONSTANT debug 0
+#DEFINE_CONSTANT DELIMITER "!\n"
+// #ENABLE_DYNAMIC
+// #SYMBOL_NAME ""
+// #HINT ""
+// #DEFINE_CONSTANT
+// #CATEGORY "" 
+// #PRINT_TO_TRACE
+// #DIGITAL_EXPAND 
+// #ANALOG_SERIAL_EXPAND 
+// #OUTPUT_SHIFT 
+// #HELP_PDF_FILE ""
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+// #ENCODING_ASCII
+// #ENCODING_UTF16
+// #ENCODING_INHERIT_FROM_PARENT
+// #ENCODING_INHERIT_FROM_PROGRAM
+/*
+#HELP_BEGIN
+   (add additional lines of help lines)
+#HELP_END
+*/
+
+
+/*******************************************************************************************
+  DIGITAL, ANALOG and SERIAL INPUTS and OUTPUTS
+*******************************************************************************************/
+DIGITAL_INPUT connected,
+              _SKIP_,
+              power_on,
+              power_off,
+              beep_on,
+              beep_off,
+              lock_on,
+              lock_off,
+              _SKIP_,
+              _SKIP_,
+              _SKIP_,
+              _SKIP_,
+              _SKIP_,
+              _SKIP_,
+              _SKIP_,
+              _SKIP_,
+              _SKIP_;
+
+ANALOG_INPUT  _SKIP_, 
+              output_all,
+              output_1,
+              output_2,
+              output_3,
+              output_4,
+              output_5,
+              output_6,
+              output_7,
+              output_8;
+
+STRING_INPUT  _SKIP_,
+              raw_command[200];
+
+BUFFER_INPUT  RX$[1500];
+
+
+// BUFFER_INPUT 
+DIGITAL_OUTPUT _SKIP_,
+               _SKIP_,
+               _SKIP_,
+               power_fb,
+               _SKIP_,
+               beep_fb,
+               _SKIP_,
+               lock_fb,
+               _SKIP_,
+               link_in_1_fb,
+               link_in_2_fb,
+               link_in_3_fb,
+               link_in_4_fb,
+               link_in_5_fb,
+               link_in_6_fb,
+               link_in_7_fb,
+               link_in_8_fb;
+
+
+ANALOG_OUTPUT  _SKIP_,
+               _SKIP_,
+               output_1_fb,
+               output_2_fb,
+               output_3_fb,
+               output_4_fb,
+               output_5_fb,
+               output_6_fb,
+               output_7_fb,
+               output_8_fb;
+
+
+STRING_OUTPUT  _SKIP_, 
+               _SKIP_, 
+               TX$;
+
+
+STRING line[200];
+
+/*******************************************************************************************
+  Functions
+*******************************************************************************************/
+Function SelectSource(integer output, integer source)
+{
+  if (connected && power_fb && source >0 && source <=8)
+  {
+    MAKESTRING( TX$, "s in %d av out %d%s", source, output, DELIMITER);
+  }
+}
+
+
+/*******************************************************************************************
+  Event Handlers
+*******************************************************************************************/
+CHANGE connected  
+{ 
+  if (connected) 
+  { 
+    line = "";
+    MAKESTRING( TX$, "r status%s", DELIMITER);
+  }
+}
+
+PUSH   power_on   { if (connected) { MAKESTRING( TX$, "s power %d%s", 1, DELIMITER);} }
+PUSH   power_off  { if (connected) { MAKESTRING( TX$, "s power %d%s", 0, DELIMITER);} }
+PUSH   beep_on    { if (connected) { MAKESTRING( TX$, "s beep %d%s",  1, DELIMITER);} }
+PUSH   beep_off   { if (connected) { MAKESTRING( TX$, "s beep %d%s",  0, DELIMITER);} }
+PUSH   lock_on    { if (connected) { MAKESTRING( TX$, "s lock %d%s",  1, DELIMITER);} }
+PUSH   lock_off   { if (connected) { MAKESTRING( TX$, "s lock %d%s",  0, DELIMITER);} }
+
+CHANGE output_all { SelectSource( 0, output_all); }
+CHANGE output_1   { SelectSource( 1, output_1); }
+CHANGE output_2   { SelectSource( 2, output_2); }
+CHANGE output_3   { SelectSource( 3, output_3); }
+CHANGE output_4   { SelectSource( 4, output_4); }
+CHANGE output_5   { SelectSource( 5, output_5); }
+CHANGE output_6   { SelectSource( 6, output_6); }
+CHANGE output_7   { SelectSource( 7, output_7); }
+CHANGE output_8   { SelectSource( 8, output_8); }
+
+CHANGE raw_command{ if (connected) { MAKESTRING(TX$, "%s", raw_command); } }
+
+CHANGE RX$
+{
+  STRING inp[20];
+  STRING out[20];
+
+  INTEGER pos;
+  INTEGER bReselectSources;
+  
+  bReselectSources = 0;
+
+  do
+  {
+    line = line + chr(getc(RX$));
+    if ( right(line,1) = "\x0A" )
+    {
+      if (debug)
+        print("->'%s' - (%d)\n", line, len(line));
+
+      // Initialization Finished!
+      if (1=Find("Initialization Finished!", line))
+      {
+        power_fb = 1;
+        bReselectSources = 1;
+      }
+      // power on
+      else if (1=Find("power", line))
+      {
+        power_fb = (Find("on", line) > 0);
+
+        if (power_fb)
+          bReselectSources = 1;
+
+      }
+      // beep on
+      else if (1=Find("beep", line))
+      {
+        beep_fb = (Find("on", line) > 0);
+      }
+      // Panel Unlock!
+      else if (1=Find("Panel ", line))
+      {
+        lock_fb = Find("Panel Unlock!", line)=0;
+      }
+      // panel button lock on
+      else if (1=Find("panel button", line))
+      {
+        lock_fb = (Find("lock on", line) > 0);
+      }
+      // hdmi input 1: disconnect
+      else if (1=Find("hdmi input", line))
+      {
+        inp = mid(line, 12, 1);
+        pos = Find("disconnect", line);
+        
+        if (debug)
+          print("Setting link_in_%s_fb to %d'\n", inp, pos=0);
+
+        if (inp="1")
+          link_in_1_fb = pos=0;
+        else if (inp="2")
+          link_in_2_fb = pos=0;
+        else if (inp="3")
+          link_in_3_fb = pos=0;
+        else if (inp="4")
+          link_in_4_fb = pos=0;
+        else if (inp="5")
+          link_in_5_fb = pos=0;
+        else if (inp="6")
+          link_in_6_fb = pos=0;
+        else if (inp="7")
+          link_in_7_fb = pos=0;
+        else if (inp="8")
+          link_in_8_fb = pos=0;
+      }
+      // input 1 -> output 1
+      else if (9=Find("-> output", line))
+      {
+        inp = mid(line, 7, 1);
+        out = mid(line,19, 1);
+        pos = ATOI(inp);
+
+        if (debug)
+          print("Setting input %s to %s (%d)'\n", inp, out, pos);
+
+        if (out="1")
+          output_1_fb = pos;
+        else if (out="2")
+          output_2_fb = pos;
+        else if (out="3")
+          output_3_fb = pos;
+        else if (out="4")
+          output_4_fb = pos;
+        else if (out="5")
+          output_5_fb = pos;
+        else if (out="6")
+          output_6_fb = pos;
+        else if (out="7")
+          output_7_fb = pos;
+        else if (out="8")
+          output_8_fb = pos;
+      }
+
+      line = "";
+    }
+  } until (len(RX$) = 0);
+
+  if (bReselectSources)
+  {
+    if (debug)
+      print("Resending sources in 2 seconds...");
+      
+    Wait(200) 
+    {
+      SelectSource( 1, output_1);
+      SelectSource( 2, output_2);
+      SelectSource( 3, output_3);
+      SelectSource( 4, output_4);
+      SelectSource( 5, output_5);
+      SelectSource( 6, output_6);
+      SelectSource( 7, output_7);
+      SelectSource( 8, output_8);
+    }
+  }
+}
+
+
+
+
+// Main
+Function Main()
+{
+    WaitForInitializationComplete();
+}

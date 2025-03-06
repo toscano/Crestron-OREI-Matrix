@@ -1,0 +1,126 @@
+/*******************************************************************************************
+  SIMPL+ Module Information
+  (Fill in comments below)
+*******************************************************************************************/
+/*
+Dealer Name:
+System Name:
+System Number:
+Programmer:
+Comments:
+*/
+
+/*******************************************************************************************
+  Compiler Directives
+  (Uncomment and declare compiler directives as needed)
+*******************************************************************************************/
+#DEFINE_CONSTANT debug 0
+#DEFINE_CONSTANT DELIMITER "!\n"
+// #ENABLE_DYNAMIC
+// #SYMBOL_NAME ""
+// #HINT ""
+// #DEFINE_CONSTANT
+// #CATEGORY "" 
+// #PRINT_TO_TRACE
+// #DIGITAL_EXPAND 
+// #ANALOG_SERIAL_EXPAND 
+// #OUTPUT_SHIFT 
+// #HELP_PDF_FILE ""
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+// #ENCODING_ASCII
+// #ENCODING_UTF16
+// #ENCODING_INHERIT_FROM_PARENT
+// #ENCODING_INHERIT_FROM_PROGRAM
+/*
+#HELP_BEGIN
+   (add additional lines of help lines)
+#HELP_END
+*/
+
+/*******************************************************************************************
+  DIGITAL, ANALOG and SERIAL INPUTS and OUTPUTS
+*******************************************************************************************/
+DIGITAL_INPUT _SKIP_,
+              _SKIP_,
+              power_on,
+              power_off,
+              menu,
+              back,
+              dpad_up,
+              dpad_down,
+              dpad_left,
+              dpad_right,
+              dpad_enter,
+              play,
+              pause,
+              stop,
+              rewind,
+              fast_forward,
+              volume_up,
+              volume_down,
+              volume_mute,
+              prev,
+              next;
+
+STRING_OUTPUT  _SKIP_, 
+               _SKIP_, 
+               raw_command;
+
+
+
+/*******************************************************************************************
+  Parameters
+  (Uncomment and declare parameters as needed)
+*******************************************************************************************/
+INTEGER_PARAMETER input_number;
+
+/*******************************************************************************************
+  Parameter Properties
+  (Uncomment and declare parameter properties as needed)
+*******************************************************************************************/
+#BEGIN_PARAMETER_PROPERTIES input_number
+   propBounds=1d, 8d;
+   propDefaultValue=1d;
+   propShortDescription="Input number";
+#END_PARAMETER_PROPERTIES
+
+
+/*******************************************************************************************
+  Functions
+*******************************************************************************************/
+Function SendCEC(STRING code)   { MAKESTRING(raw_command,"s cec in %d %s%s", input_number, code, DELIMITER); }
+
+
+/*******************************************************************************************
+  Event Handlers
+*******************************************************************************************/
+PUSH power_on     { SendCEC("on"    );}
+PUSH power_off    { SendCEC("off"   );}
+PUSH menu         { SendCEC("menu"  );}
+PUSH back         { SendCEC("back"  );}
+PUSH dpad_up      { SendCEC("up"    );}
+PUSH dpad_down    { SendCEC("down"  );}
+PUSH dpad_left    { SendCEC("left"  );}
+PUSH dpad_right   { SendCEC("right" );}
+PUSH dpad_enter   { SendCEC("enter" );}
+PUSH play         { SendCEC("play"  );}
+PUSH pause        { SendCEC("pause" );}
+PUSH stop         { SendCEC("stop"  );}
+PUSH rewind       { SendCEC("rew"   );}
+PUSH fast_forward { SendCEC("ff"    );}
+PUSH volume_up    { SendCEC("vol+"  );}
+PUSH volume_down  { SendCEC("vol-"  );}
+PUSH volume_mute  { SendCEC("mute"  );}
+PUSH prev         { SendCEC("previous");}
+PUSH next         { SendCEC("next"  );}
+
+
+
+
+// Main
+Function Main()
+{
+    WaitForInitializationComplete();
+}
