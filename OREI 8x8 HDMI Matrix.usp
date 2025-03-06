@@ -20,11 +20,11 @@ Comments:
 // #SYMBOL_NAME ""
 // #HINT ""
 // #DEFINE_CONSTANT
-// #CATEGORY "" 
+// #CATEGORY ""
 // #PRINT_TO_TRACE
-// #DIGITAL_EXPAND 
-// #ANALOG_SERIAL_EXPAND 
-// #OUTPUT_SHIFT 
+// #DIGITAL_EXPAND
+// #ANALOG_SERIAL_EXPAND
+// #OUTPUT_SHIFT
 // #HELP_PDF_FILE ""
 #DEFAULT_VOLATILE
 #ENABLE_STACK_CHECKING
@@ -43,7 +43,8 @@ Comments:
 /*******************************************************************************************
   DIGITAL, ANALOG and SERIAL INPUTS and OUTPUTS
 *******************************************************************************************/
-DIGITAL_INPUT connected,
+DIGITAL_INPUT _SKIP_,
+              connected,
               _SKIP_,
               power_on,
               power_off,
@@ -61,7 +62,7 @@ DIGITAL_INPUT connected,
               _SKIP_,
               _SKIP_;
 
-ANALOG_INPUT  _SKIP_, 
+ANALOG_INPUT  _SKIP_,
               output_all,
               output_1,
               output_2,
@@ -78,8 +79,9 @@ STRING_INPUT  _SKIP_,
 BUFFER_INPUT  RX$[1500];
 
 
-// BUFFER_INPUT 
+// BUFFER_INPUT
 DIGITAL_OUTPUT _SKIP_,
+               _SKIP_,
                _SKIP_,
                _SKIP_,
                power_fb,
@@ -110,9 +112,25 @@ ANALOG_OUTPUT  _SKIP_,
                output_8_fb;
 
 
-STRING_OUTPUT  _SKIP_, 
-               _SKIP_, 
+STRING_OUTPUT  _SKIP_,
+               _SKIP_,
                TX$;
+
+/*******************************************************************************************
+  Parameters
+  (Uncomment and declare parameters as needed)
+*******************************************************************************************/
+INTEGER_PARAMETER off_delay;
+
+/*******************************************************************************************
+  Parameter Properties
+  (Uncomment and declare parameter properties as needed)
+*******************************************************************************************/
+#BEGIN_PARAMETER_PROPERTIES off_delay
+   propBounds=2s, 60s;
+   propDefaultValue=10s;
+   propShortDescription="Off Delay";
+#END_PARAMETER_PROPERTIES
 
 
 STRING line[200];
@@ -132,17 +150,52 @@ Function SelectSource(integer output, integer source)
 /*******************************************************************************************
   Event Handlers
 *******************************************************************************************/
-CHANGE connected  
-{ 
-  if (connected) 
-  { 
+CHANGE connected
+{
+  if (connected)
+  {
     line = "";
     MAKESTRING( TX$, "r status%s", DELIMITER);
   }
 }
 
-PUSH   power_on   { if (connected) { MAKESTRING( TX$, "s power %d%s", 1, DELIMITER);} }
-PUSH   power_off  { if (connected) { MAKESTRING( TX$, "s power %d%s", 0, DELIMITER);} }
+INTEGER should_be_on;
+
+PUSH   power_on
+{
+  if (connected)
+  {
+    should_be_on = 1;
+    MAKESTRING( TX$, "s power %d%s", 1, DELIMITER);
+  }
+}
+
+PUSH   power_off
+{
+  if (connected)
+  {
+    should_be_on = 0;
+
+    if (debug)
+      print("Waiting %d to turn off.", off_delay);
+
+    Wait(off_delay)
+    {
+      if (should_be_on=0)
+      {
+        MAKESTRING( TX$, "s power %d%s", 0, DELIMITER);
+      }
+      else
+      {
+        if (debug)
+        {
+          print("Skipped power off due to power_on while in delay.");
+        }
+      }
+    }
+  }
+}
+
 PUSH   beep_on    { if (connected) { MAKESTRING( TX$, "s beep %d%s",  1, DELIMITER);} }
 PUSH   beep_off   { if (connected) { MAKESTRING( TX$, "s beep %d%s",  0, DELIMITER);} }
 PUSH   lock_on    { if (connected) { MAKESTRING( TX$, "s lock %d%s",  1, DELIMITER);} }
@@ -167,7 +220,7 @@ CHANGE RX$
 
   INTEGER pos;
   INTEGER bReselectSources;
-  
+
   bReselectSources = 0;
 
   do
@@ -213,7 +266,7 @@ CHANGE RX$
       {
         inp = mid(line, 12, 1);
         pos = Find("disconnect", line);
-        
+
         if (debug)
           print("Setting link_in_%s_fb to %d'\n", inp, pos=0);
 
@@ -270,8 +323,8 @@ CHANGE RX$
   {
     if (debug)
       print("Resending sources in 2 seconds...");
-      
-    Wait(200) 
+
+    Wait(200)
     {
       SelectSource( 1, output_1);
       SelectSource( 2, output_2);
@@ -291,5 +344,6 @@ CHANGE RX$
 // Main
 Function Main()
 {
-    WaitForInitializationComplete();
+  should_be_on = 0;
+  WaitForInitializationComplete();
 }
