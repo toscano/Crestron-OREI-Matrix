@@ -220,6 +220,7 @@ CHANGE RX$
 
   INTEGER pos;
   INTEGER bReselectSources;
+  INTEGER power_fb_new;
 
   bReselectSources = 0;
 
@@ -240,11 +241,15 @@ CHANGE RX$
       // power on
       else if (1=Find("power", line))
       {
-        power_fb = (Find("on", line) > 0);
+        power_fb_new = (Find("on", line) > 0);
 
-        if (power_fb)
-          bReselectSources = 1;
+        if (power_fb_new <> power_fb)
+        {
+          power_fb = power_fb_new;
 
+          if (power_fb)
+            bReselectSources = 1;
+        }
       }
       // beep on
       else if (1=Find("beep", line))
