@@ -16,6 +16,7 @@ Comments:
 *******************************************************************************************/
 #DEFINE_CONSTANT debug 0
 #DEFINE_CONSTANT DELIMITER "!\n"
+#DEFINE_CONSTANT SEND_PACING 25
 // #ENABLE_DYNAMIC
 // #SYMBOL_NAME ""
 // #HINT ""
@@ -142,7 +143,12 @@ Function SelectSource(integer output, integer source)
 {
   if (connected && power_fb && source >0 && source <=8)
   {
+
+    if (debug)
+      print("SelectSource(out=%d, src=%d)", output, source);
+
     MAKESTRING( TX$, "s in %d av out %d%s", source, output, DELIMITER);
+    Delay(SEND_PACING);
   }
 }
 
@@ -156,6 +162,7 @@ CHANGE connected
   {
     line = "";
     MAKESTRING( TX$, "r status%s", DELIMITER);
+    Delay(SEND_PACING);
   }
 }
 
@@ -167,6 +174,7 @@ PUSH   power_on
   {
     should_be_on = 1;
     MAKESTRING( TX$, "s power %d%s", 1, DELIMITER);
+    Delay(SEND_PACING);
   }
 }
 
@@ -184,6 +192,7 @@ PUSH   power_off
       if (should_be_on=0)
       {
         MAKESTRING( TX$, "s power %d%s", 0, DELIMITER);
+        Delay(SEND_PACING);
       }
       else
       {
@@ -196,10 +205,10 @@ PUSH   power_off
   }
 }
 
-PUSH   beep_on    { if (connected) { MAKESTRING( TX$, "s beep %d%s",  1, DELIMITER);} }
-PUSH   beep_off   { if (connected) { MAKESTRING( TX$, "s beep %d%s",  0, DELIMITER);} }
-PUSH   lock_on    { if (connected) { MAKESTRING( TX$, "s lock %d%s",  1, DELIMITER);} }
-PUSH   lock_off   { if (connected) { MAKESTRING( TX$, "s lock %d%s",  0, DELIMITER);} }
+PUSH   beep_on    { if (connected) { MAKESTRING( TX$, "s beep %d%s",  1, DELIMITER); Delay(SEND_PACING);} }
+PUSH   beep_off   { if (connected) { MAKESTRING( TX$, "s beep %d%s",  0, DELIMITER); Delay(SEND_PACING);} }
+PUSH   lock_on    { if (connected) { MAKESTRING( TX$, "s lock %d%s",  1, DELIMITER); Delay(SEND_PACING);} }
+PUSH   lock_off   { if (connected) { MAKESTRING( TX$, "s lock %d%s",  0, DELIMITER); Delay(SEND_PACING);} }
 
 CHANGE output_all { SelectSource( 0, output_all); }
 CHANGE output_1   { SelectSource( 1, output_1); }
@@ -211,7 +220,7 @@ CHANGE output_6   { SelectSource( 6, output_6); }
 CHANGE output_7   { SelectSource( 7, output_7); }
 CHANGE output_8   { SelectSource( 8, output_8); }
 
-CHANGE raw_command{ if (connected) { MAKESTRING(TX$, "%s", raw_command); } }
+CHANGE raw_command{ if (connected) { MAKESTRING(TX$, "%s", raw_command); Delay(SEND_PACING); } }
 
 CHANGE RX$
 {
